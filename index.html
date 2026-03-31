@@ -1,0 +1,3482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书道心力模型 · 教学数据看板</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0c0a; --surface: #18160f; --card: #201d12;
+      --card-hover: #2a2618; --border: #3a3520;
+      --text: #f0e8d5; --text-dim: #8a7d65; --text-muted: #5a5040;
+      --red: #c8442a; --red-light: #e06050;
+      --gold: #d4a843; --gold-light: #e0b860;
+      --green: #4a8c6a; --green-light: #6aac8a;
+      --blue: #4a7a9c; --blue-light: #6090b0;
+      --purple: #7a5c9c; --cream: #f5edd8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: Inter, 'Noto Sans SC', sans-serif;
+      min-height: 100vh; overflow-x: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(200,68,42,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(212,168,67,0.04) 0%, transparent 60%);
+    }
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,12,10,0.92); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); padding: 0 40px; height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-title { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--cream); letter-spacing: 0.08em; }
+    .header-sub { font-size: 12px; color: var(--text-dim); margin-left: 6px; }
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .badge-live { display: flex; align-items: center; gap: 6px; background: rgba(200,68,42,0.12); border: 1px solid rgba(200,68,42,0.3); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--red); }
+    .badge-live .dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .header-lesson { font-size: 12px; color: var(--text-dim); font-family: 'Noto Serif SC', serif; }
+    .header-meta { font-size: 12px; color: var(--text-muted); }
+    .container { max-width: 1440px; margin: 0 auto; padding: 28px 40px 60px; position: relative; z-index: 1; }
+    .fade-in { opacity: 0; transform: translateY(18px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px 26px; position: relative; overflow: hidden; transition: all 0.3s; }
+    .stat-card:hover { border-color: rgba(212,168,67,0.4); background: var(--card-hover); transform: translateY(-2px); }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .stat-card.red::before { background: var(--red); }
+    .stat-card.gold::before { background: var(--gold); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .stat-value { font-family: 'Noto Serif SC', serif; font-size: 40px; font-weight: 900; color: var(--cream); line-height: 1; margin-bottom: 8px; }
+    .stat-meta { font-size: 12px; color: var(--text-dim); }
+    .stat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+    .stat-badge.up { background: rgba(74,140,106,0.15); color: var(--green); }
+    .stat-badge.down { background: rgba(200,68,42,0.15); color: var(--red); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .grid-wide { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px 28px; transition: border-color 0.3s; }
+    .card:hover { border-color: rgba(212,168,67,0.2); }
+    .card-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
+    .card-title { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; color: var(--cream); letter-spacing: 0.05em; }
+    .card-tag { font-size: 10px; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; letter-spacing: 0.05em; }
+    .pie-wrap { display: flex; align-items: center; gap: 20px; }
+    .pie-wrap canvas { max-width: 170px; }
+    .pie-legend { flex: 1; }
+    .pie-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pie-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pie-item-label { font-size: 12px; color: var(--text-dim); flex: 1; }
+    .pie-item-value { font-size: 13px; font-weight: 600; color: var(--text); }
+    .heat-item { margin-bottom: 14px; }
+    .heat-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+    .heat-name { font-size: 13px; color: var(--text); }
+    .heat-score { font-size: 12px; font-weight: 600; }
+    .heat-bar-bg { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+    .heat-bar-fill { height: 100%; border-radius: 3px; transition: width 1.4s cubic-bezier(0.22,1,0.36,1); }
+    .mindset-track { display: flex; flex-direction: column; gap: 14px; }
+    .mindset-stage { display: flex; align-items: center; gap: 10px; }
+    .mindset-label { font-size: 11px; color: var(--text-dim); width: 72px; flex-shrink: 0; text-align: right; }
+    .mindset-bar-bg { flex: 1; height: 26px; background: rgba(255,255,255,0.04); border-radius: 6px; overflow: hidden; }
+    .mindset-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 11px; font-weight: 600; color: rgba(0,0,0,0.7); transition: width 1.4s cubic-bezier(0.22,1,0.36,1); white-space: nowrap; }
+    .mindset-count { font-size: 11px; color: var(--text-muted); width: 34px; text-align: right; flex-shrink: 0; }
+    .radar-wrap { position: relative; height: 220px; }
+    .student-section { margin-bottom: 20px; }
+    .student-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .student-tab { font-size: 12px; padding: 6px 14px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-dim); transition: all 0.2s; font-family: inherit; }
+    .student-tab.active { background: rgba(212,168,67,0.12); border-color: rgba(212,168,67,0.4); color: var(--gold); }
+    .student-tab:hover { border-color: rgba(212,168,67,0.3); color: var(--text); }
+    .tab-count { display: inline-block; background: rgba(255,255,255,0.08); border-radius: 8px; padding: 1px 6px; font-size: 10px; margin-left: 4px; }
+    .student-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .student-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; transition: all 0.25s; cursor: default; position: relative; }
+    .student-card:hover { border-color: rgba(212,168,67,0.4); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.3); }
+    .student-card.red { border-left: 3px solid var(--red); }
+    .student-card.gold { border-left: 3px solid var(--gold); }
+    .student-card.green { border-left: 3px solid var(--green); }
+    .student-card.blue { border-left: 3px solid var(--blue); }
+    .student-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+    .student-name { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
+    .student-badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
+    .badge-risk { background: rgba(200,68,42,0.15); color: var(--red); border: 1px solid rgba(200,68,42,0.3); }
+    .badge-highlight { background: rgba(212,168,67,0.15); color: var(--gold); border: 1px solid rgba(212,168,67,0.3); }
+    .badge-stable { background: rgba(74,140,106,0.15); color: var(--green); border: 1px solid rgba(74,140,106,0.3); }
+    .badge-normal { background: rgba(74,122,156,0.15); color: var(--blue); border: 1px solid rgba(74,122,156,0.3); }
+    .student-issue { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-bottom: 8px; }
+    .student-stage-line { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+    .student-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag { font-size: 10px; padding: 3px 7px; border-radius: 5px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text-muted); }
+    .student-strength { font-size: 11px; color: var(--green); margin-bottom: 5px; }
+    .student-progress { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+    .student-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .student-card.expanded .student-detail { display: block; }
+    .detail-section { margin-bottom: 8px; }
+    .detail-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+    .detail-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+    .detail-homework { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+    .detail-homework li { margin-bottom: 2px; }
+    .quotes-list { display: flex; flex-direction: column; gap: 10px; }
+    .quote-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; }
+    .quote-item::before { content: '"'; position: absolute; top: -2px; left: 10px; font-family: 'Noto Serif SC', serif; font-size: 32px; color: var(--red); opacity: 0.35; line-height: 1; }
+    .quote-text { font-size: 12px; color: var(--text); line-height: 1.6; padding-left: 8px; }
+    .quote-source { font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: right; }
+    .action-list { display: flex; flex-direction: column; gap: 8px; }
+    .action-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid var(--border); }
+    .action-num { width: 18px; height: 18px; border-radius: 50%; background: rgba(200,68,42,0.15); color: var(--red); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .action-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+    .action-highlight { color: var(--text); font-weight: 500; }
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 24px 0; }
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+    .trend-lesson { margin-bottom: 14px; padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; }
+    .trend-lesson-label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; font-weight: 500; }
+    .trend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .trend-lesson-content { font-size: 12px; color: var(--text-dim); line-height: 1.5; margin-bottom: 4px; }
+    .trend-lesson-score { font-size: 11px; color: var(--text-muted); }
+    .trend-eval { margin-top: 14px; padding: 12px; border-radius: 10px; border: 1px solid; }
+    .trend-eval-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .trend-eval-body { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+    @media (max-width: 1100px) { .stats-row { grid-template-columns: repeat(2,1fr); } .grid-2,.grid-3,.grid-wide { grid-template-columns: 1fr; } .container { padding: 20px 20px 40px; } .header { padding: 0 20px; } }
+    @media print { body { background: white; color: black; } .card,.stat-card { background: #f5f5f5; border-color: #ccc; } }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div style="display:flex;align-items:baseline;gap:4px">
+    <div class="header-title">书道心力模型</div>
+    <div class="header-sub">教学数据看板</div>
+  </div>
+  <div class="header-right">
+    <div class="badge-live"><span class="dot"></span>数据已同步</div>
+    <div class="header-lesson" id="hd-lesson">加载中…</div>
+    <div class="header-meta" id="hd-meta"></div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 统计卡片 -->
+  <div class="stats-row fade-in" id="stats-row">
+    <div class="loading" style="grid-column:1/-1">加载数据中…</div>
+  </div>
+
+  <!-- 第一行：阶段饼图 + 技法热力 -->
+  <div class="grid-2 fade-in" style="transition-delay:0.08s">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">学员阶段分布</div>
+        <div class="card-tag" id="stage-tag">--份档案</div>
+      </div>
+      <div class="pie-wrap">
+        <canvas id="stagePie" width="170" height="170"></canvas>
+        <div class="pie-legend" id="pie-legend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">技法掌握热力图</div>
+        <div class="card-tag">本课核心技法</div>
+      </div>
+      <div id="heat-items">
+        <div class="heat-item">
+          <div class="heat-header"><span class="heat-name">笔端一连</span><span class="heat-score" style="color:#c8442a">42%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar1" style="width:42%;background:linear-gradient(90deg,#c8442a,#e06050)"></div></div>
+        </div>
+        <div class="heat-item">
+          <div class="heat-header"><span class="heat-name">多横等距</span><span class="heat-score" style="color:#d4a843">58%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar2" style="width:58%;background:linear-gradient(90deg,#d4a843,#e0b860)"></div></div>
+        </div>
+        <div class="heat-item">
+          <div class="heat-header"><span class="heat-name">王/五区分</span><span class="heat-score" style="color:#4a7a9c">65%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar3" style="width:65%;background:linear-gradient(90deg,#4a7a9c,#6090b0)"></div></div>
+        </div>
+        <div class="heat-item">
+          <div class="heat-header"><span class="heat-name">长横平正</span><span class="heat-score" style="color:#d4a843">55%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar4" style="width:55%;background:linear-gradient(90deg,#d4a843,#e0b860)"></div></div>
+        </div>
+        <div class="heat-item">
+          <div class="heat-header"><span class="heat-name">反捺使用</span><span class="heat-score" style="color:#7a5c9c">28%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar5" style="width:28%;background:linear-gradient(90deg,#7a5c9c,#9a7cbc)"></div></div>
+        </div>
+        <div class="heat-item" style="margin-bottom:0">
+          <div class="heat-header"><span class="heat-name">撇捺节奏</span><span class="heat-score" style="color:#4a8c6a">70%</span></div>
+          <div class="heat-bar-bg"><div class="heat-bar-fill" id="bar6" style="width:70%;background:linear-gradient(90deg,#4a8c6a,#6aac8a)"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第二行：心法分布 + 雷达 -->
+  <div class="grid-3 fade-in" style="transition-delay:0.16s">
+    <div class="card" style="grid-column:span 2">
+      <div class="card-header">
+        <div class="card-title">心法觉醒分布</div>
+        <div class="card-tag">从混沌到艺术</div>
+      </div>
+      <div class="mindset-track" id="mindset-track"></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">班级风险雷达</div>
+        <div class="card-tag">综合预警</div>
+      </div>
+      <div class="radar-wrap"><canvas id="riskRadar"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 第三行：金句 + 行动 -->
+  <div class="grid-wide fade-in" style="transition-delay:0.24s">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">高复用金句库</div>
+        <div class="card-tag">本课沉淀</div>
+      </div>
+      <div class="quotes-list" id="quotes-list">
+        <div class="quote-item"><div class="quote-text">先死了才能活，不懂也先模仿，模仿久了就懂了。</div><div class="quote-source">— 老师 · 通用心法</div></div>
+        <div class="quote-item"><div class="quote-text">你均衡已经做得特别好，往艺术方向走，变化更丰富、更大胆、更夸张一些。</div><div class="quote-source">— 老师 · 郝思成专项</div></div>
+        <div class="quote-item"><div class="quote-text">不要让错误不断重复，带着要求去练习，不要趴在上面写。</div><div class="quote-source">— 老师 · 通用规范</div></div>
+        <div class="quote-item"><div class="quote-text">既然有可以交的了，其他的你先放心大胆地写。</div><div class="quote-source">— 老师 · 鼓励话术</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">下一课行动计划</div>
+        <div class="card-tag">待执行</div>
+      </div>
+      <div class="action-list" id="action-list"></div>
+    </div>
+  </div>
+
+  <!-- 折线图区域 -->
+  <!-- 进步趋势对比区 -->
+  <div id="trend-section" class="fade-in" style="transition-delay:0.12s">
+    <!-- 标题行 -->
+    <div class="card-header" style="margin-bottom:16px">
+      <div class="card-title">学员进步趋势对比</div>
+      <div class="card-tag">三节课 · 综合掌握度变化</div>
+    </div>
+
+    <!-- 对比折线图 -->
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            <span style="width:10px;height:10px;border-radius:50%;background:#c8442a;display:inline-block"></span>
+            刘启骁 · 进步趋势
+          </div>
+          <div class="card-tag">规范建立期</div>
+        </div>
+        <div style="height:240px;position:relative"><canvas id="trendChart_liu"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            <span style="width:10px;height:10px;border-radius:50%;background:#d4a843;display:inline-block"></span>
+            郝思成 · 进步趋势
+          </div>
+          <div class="card-tag">艺术突破期</div>
+        </div>
+        <div style="height:240px;position:relative"><canvas id="trendChart_hao"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 双人对比折线图（综合掌握度叠加） -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <div class="card-title">综合掌握度 · 双人对比</div>
+        <div class="card-tag">同一坐标轴 · 直观差距</div>
+      </div>
+      <div style="height:220px;position:relative"><canvas id="trendChart_compare"></canvas></div>
+    </div>
+
+    <!-- 详情卡片 -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">刘启骁 · 三节课关键变化</div>
+          <div class="card-tag">逐字稿分析</div>
+        </div>
+        <div style="padding:4px 0">
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#c8442a"></span>第1课 03-11</div>
+            <div class="trend-lesson-content">笔顺不规范被当场指出，没看教材就直接写，手比脑子快。</div>
+            <div class="trend-lesson-score">技法 35% · 心法 20% · 综合 28%</div>
+          </div>
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#d4a843"></span>第2课 03-18</div>
+            <div class="trend-lesson-content">横画倾斜问题开始改善，三排节奏初步建立，上课专注度提升。</div>
+            <div class="trend-lesson-score">技法 48% · 心法 35% · 综合 42%</div>
+          </div>
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#4a8c6a"></span>第3课 03-25</div>
+            <div class="trend-lesson-content">模仿能力被老师肯定，三排三排节奏建立，最终安静下来开始写了。</div>
+            <div class="trend-lesson-score">技法 58% · 心法 42% · 综合 50%</div>
+          </div>
+          <div class="trend-eval" style="background:rgba(200,68,42,0.06);border-color:rgba(200,68,42,0.2)">
+            <div class="trend-eval-title" style="color:var(--red)">阶段判断</div>
+            <div class="trend-eval-body">进步明显，核心卡点：从「随性书写」转向「按要求书写」仍需强化笔顺习惯。三节课综合提升 +22%。</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">郝思成 · 三节课关键变化</div>
+          <div class="card-tag">逐字稿分析</div>
+        </div>
+        <div style="padding:4px 0">
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#c8442a"></span>第1课 03-11</div>
+            <div class="trend-lesson-content">均衡感强，结构端正，老师开始关注其潜力。</div>
+            <div class="trend-lesson-score">技法 55% · 心法 40% · 综合 48%</div>
+          </div>
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#d4a843"></span>第2课 03-18</div>
+            <div class="trend-lesson-content">开始尝试轻重变化，老师引导走向艺术表达方向。</div>
+            <div class="trend-lesson-score">技法 68% · 心法 55% · 综合 62%</div>
+          </div>
+          <div class="trend-lesson">
+            <div class="trend-lesson-label"><span class="trend-dot" style="background:#4a8c6a"></span>第3课 03-25</div>
+            <div class="trend-lesson-content">被老师公开表扬「均衡已做得特别好」，进入艺术突破期。</div>
+            <div class="trend-lesson-score">技法 78% · 心法 70% · 综合 75%</div>
+          </div>
+          <div class="trend-eval" style="background:rgba(212,168,67,0.06);border-color:rgba(212,168,67,0.2)">
+            <div class="trend-eval-title" style="color:var(--gold)">阶段判断</div>
+            <div class="trend-eval-body">高速成长，已进入艺术突破期。三节课综合提升 +27%，是班级最高潜力学员之一。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第四行：全学员 -->
+  <div class="divider fade-in" style="transition-delay:0.32s"></div>
+  <div class="fade-in" style="transition-delay:0.36s">
+    <div class="card-header" style="margin-bottom:16px">
+      <div class="card-title">全学员档案</div>
+      <div class="card-tag" id="student-count-tag">--名学员</div>
+    </div>
+    <div class="student-tabs" id="student-tabs"></div>
+    <div class="student-grid" id="student-grid"></div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var EMBEDDED_DATA = {
+  "meta": {
+    "lesson_date": "2026-03-25",
+    "lesson_title": "笔法与字形规范",
+    "generated_at": "2026-03-28T00:00:33.979265",
+    "total_students": 71
+  },
+  "stats": {
+    "total": 71,
+    "stage_counts": {
+      "规范建立期": 67,
+      "艺术突破期": 1,
+      "规范完善期": 3
+    },
+    "type_counts": {
+      "needs_improvement": 2,
+      "highlight": 1,
+      "normal": 68
+    },
+    "risk_students": [
+      "李沐荷",
+      "刘启骁"
+    ],
+    "highlight_students": [
+      "郝思成"
+    ],
+    "risk_count": 2,
+    "highlight_count": 1
+  },
+  "students": {
+    "陈乐颖": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "陈思成": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "陈煜晓": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "陈钰涵": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "陈祖兴": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "程益谦": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "丁子": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "宫成在": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "顾晨毅": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "郝思成": {
+      "type": "highlight",
+      "stage": "艺术突破期",
+      "stage_from": "规范均衡",
+      "stage_to": "变化大胆夸张",
+      "stage_desc": "你的基础已经很扎实，现在需要的是更大胆的突破。",
+      "core_issue": "过于保守，只在均衡层面停留",
+      "core_issue_detail": "你已经「会了」，但还没「变了」。这是成长中的甜蜜区。",
+      "technique_issue": "缺乏变化和大胆的尝试",
+      "technique_fix": "在均衡基础上加入轻重变化，让笔画更大胆夸张",
+      "mindset_issue": "满足于「已经很好了」",
+      "mindset_desc": "你均衡已经特别好了，下一步，让自己更大胆、更夸张一些。",
+      "strength": "均衡、结构好，被老师公开表扬",
+      "teacher_praise": "因为均衡已经做得特别好。如果往书法艺术上面去走，就是让它的变化更丰富、更大胆、更夸张一些。",
+      "teacher_criticism": null,
+      "next_actions": [
+        "尝试在均衡基础上加入轻重变化",
+        "笔画可以更大胆更夸张",
+        "不要怕写「丑」"
+      ],
+      "parent_tip": "鼓励孩子：你的基本功已经很扎实了，现在可以更大胆地追求变化！",
+      "wake_word": "你的均衡已经特别好了，下一步，让自己更大胆、更夸张一些。",
+      "homework": [
+        "继续保持均衡的好习惯",
+        "尝试在笔画的轻重上加入变化",
+        "写一个字，尝试两种不同的粗细"
+      ],
+      "progress": [
+        "均衡感强，被老师点名表扬为「做得特别好」"
+      ],
+      "risk": "停留在均衡阶段太久，会失去走向艺术表达的机会。",
+      "tags": [
+        "艺术突破",
+        "结构优秀",
+        "需激励大胆"
+      ],
+      "card_color": "gold"
+    },
+    "郝思羽": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "贺云舒": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "黄子溢": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "江梓恺": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "江梓瑞": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "江梓睿": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "蒋林孜": {
+      "type": "normal",
+      "stage": "规范完善期",
+      "stage_from": "保守练习",
+      "stage_to": "大胆尝试",
+      "stage_desc": "基础已经有了，下一步是走出舒适区。",
+      "core_issue": "过于保守，不敢尝试有难度的字",
+      "core_issue_detail": "只写会的永远不会进步，进步都是在挑战中来的。",
+      "technique_issue": "缺乏挑战性练习",
+      "technique_fix": "挑选有难度的字来写，不要只待在舒适区",
+      "mindset_issue": "害怕失败",
+      "mindset_desc": "你已经在起跑线上了，但真正的进步来自走出舒适区的那一刻。",
+      "strength": "基础扎实",
+      "teacher_praise": null,
+      "teacher_criticism": "过于保守，只写自己会的。",
+      "next_actions": [
+        "尝试写有难度的字",
+        "不要只待在舒适区",
+        "写得不好是正常的"
+      ],
+      "parent_tip": "鼓励孩子：写得不好是正常的，进步都是在挑战中来的。",
+      "wake_word": "你已经在起跑线上了，但真正的进步来自走出舒适区的那一刻。",
+      "homework": [
+        "挑选一个难的字尝试写三排",
+        "不要只写自己会的"
+      ],
+      "progress": [
+        "基础扎实"
+      ],
+      "risk": "待在舒适区太久，会错过突破自己的机会。",
+      "tags": [
+        "规范完善",
+        "保守",
+        "基础扎实"
+      ],
+      "card_color": "gold"
+    },
+    "焦欣彦": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "雷曜旭": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李俊贤": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李乐渔": {
+      "type": "normal",
+      "stage": "规范完善期",
+      "stage_from": "用力过猛",
+      "stage_to": "轻松自然",
+      "stage_desc": "你在从「用力」走向「用心」，这是质的转变。",
+      "core_issue": "书写时过于用力",
+      "core_issue_detail": "用力写出来的字偏僵硬，放松写反而更灵动。",
+      "technique_issue": "轻重控制不稳",
+      "technique_fix": "写得轻一点，由轻到重，收笔有拐进动作",
+      "mindset_issue": "过于紧张",
+      "mindset_desc": "你已经找到感觉了，放松一点，笔尖会自己找到方向。",
+      "strength": "愿意接受指导，进步意识强",
+      "teacher_praise": "写的时候轻一点，写得比较用心。进步明显。",
+      "teacher_criticism": null,
+      "next_actions": [
+        "写得轻一点",
+        "由轻到重，感受节奏变化"
+      ],
+      "parent_tip": "多鼓励，减少压力，让孩子写字时更放松。",
+      "wake_word": "你已经找到感觉了，放松一点，笔尖会自己找到方向。",
+      "homework": [
+        "写字时手轻一点",
+        "感受由轻到重的节奏"
+      ],
+      "progress": [
+        "老师肯定进步明显"
+      ],
+      "risk": "太紧张会让字越写越僵硬。",
+      "tags": [
+        "规范完善",
+        "用力过大",
+        "在进步"
+      ],
+      "card_color": "green"
+    },
+    "李乐翊": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李沐荷": {
+      "type": "needs_improvement",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "模仿能力是书法最重要的天赋之一，用好它。",
+      "core_issue": "上课时间观念需要加强（迟到）",
+      "core_issue_detail": "迟到会错过开头的要点讲解，每次都损失一点。",
+      "technique_issue": "技法掌握还需多练习",
+      "technique_fix": "模仿各种丰富技法，不要只待在舒适区",
+      "mindset_issue": "专注力还需要加强",
+      "mindset_desc": "你模仿能力不错，第一步是准时坐到教室里。",
+      "strength": "模仿能力被老师肯定",
+      "teacher_praise": "模仿能力还不错。",
+      "teacher_criticism": null,
+      "next_actions": [
+        "准时上课（提前5分钟到）",
+        "模仿各种丰富技法",
+        "不走神"
+      ],
+      "parent_tip": "提前5分钟到教室，做好准备再开始。",
+      "wake_word": "你模仿能力不错，但第一步是准时坐到教室里。",
+      "homework": [
+        "准时到课",
+        "模仿各种丰富技法"
+      ],
+      "progress": [
+        "模仿能力被肯定"
+      ],
+      "risk": "迟到会让每节课都从「错过」开始，积累下来差距很大。",
+      "tags": [
+        "迟到",
+        "模仿力强",
+        "需专注"
+      ],
+      "card_color": "red"
+    },
+    "李沐秋": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李芊墨": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李页纳": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "李佑安": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "廖济焓": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "林昊然": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "林筠卓": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "刘启骁": {
+      "type": "needs_improvement",
+      "stage": "规范建立期",
+      "stage_from": "随性书写",
+      "stage_to": "按要求书写",
+      "stage_desc": "你不是不会写，是不看不听就开始写。这个阶段最大的敌人不是字形，是态度。",
+      "core_issue": "不看不听就直接动手，习惯性跳过观察步骤",
+      "core_issue_detail": "你的手比脑子快，但书法偏偏是「先看清楚再动手」的事。",
+      "technique_issue": "横画过于倾斜，写完没有收回来",
+      "technique_fix": "横画可以微翘，但收笔时一定要「回来」",
+      "mindset_issue": "手比脑子快，心静不下来",
+      "mindset_desc": "你模仿能力很强，但你还没学会让脑子先于手动。",
+      "strength": "模仿能力被老师肯定",
+      "teacher_praise": null,
+      "teacher_criticism": "你一来就写个横，你就乱整，不看。写的笔顺你都不看。",
+      "next_actions": [
+        "先看笔顺再落笔",
+        "横画收笔时要回来",
+        "上课时把手机放远一点"
+      ],
+      "parent_tip": "每天练习前问一句：今天的笔顺看清楚了吗？",
+      "wake_word": "你模仿能力很强，但你还没学会让脑子先于手动。",
+      "homework": [
+        "王字三排（注意笔顺）",
+        "木字三排",
+        "十字三排",
+        "2字三排（长横要平正）"
+      ],
+      "progress": [
+        "最终安静下来开始写了",
+        "三排三排节奏初步建立"
+      ],
+      "risk": "「不看要求就直接动手」这个习惯如果继续，后面的学习会一直在重复错误。",
+      "tags": [
+        "笔端一连",
+        "态度问题",
+        "模仿力强"
+      ],
+      "card_color": "red"
+    },
+    "刘芮希": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "刘栩": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "刘宇航": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "吕泓睿": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "罗信果": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "闵贝橙": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "潘子兮": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "倾松": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "任柯宇": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "沙星宇": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "盛翊成": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "沈未来": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "沈向来": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "谭越兮": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "唐嘉誉": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "唐钰墨": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "田沛娴": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "王博涵": {
+      "type": "normal",
+      "stage": "规范完善期",
+      "stage_from": "用力过猛",
+      "stage_to": "轻重协调",
+      "stage_desc": "你正在从「用力」走向「放松」，这是书法里很重要的一步。",
+      "core_issue": "书写时过于用力，缺乏轻重变化",
+      "core_issue_detail": "太紧张会让笔画僵硬，放松一点，笔尖反而更听使唤。",
+      "technique_issue": "粗细分配不均",
+      "technique_fix": "写得轻一点，由轻到重，收笔时有拐进动作",
+      "mindset_issue": "过于紧张，放不开",
+      "mindset_desc": "你已经写得很干净了，放松一点，让自己写得更有灵气。",
+      "strength": "字形端正，态度认真，愿意调整",
+      "teacher_praise": "字形比把不较大，剩下就是把粗细咱们再分分。进步明显。",
+      "teacher_criticism": null,
+      "next_actions": [
+        "书写时手轻一点",
+        "由轻到重，感受节奏",
+        "收笔时有拐进动作"
+      ],
+      "parent_tip": "提醒孩子：写字时可以放松一点，不要太用力。",
+      "wake_word": "你已经写得很干净了，放松一点，让笔尖自己找到方向。",
+      "homework": [
+        "王字三排（轻一点）",
+        "注意粗细的变化和分配"
+      ],
+      "progress": [
+        "开始学会加水调整书写",
+        "字形比例改善"
+      ],
+      "risk": "太用力会让笔画僵硬，长期下去会影响书写速度。",
+      "tags": [
+        "规范完善",
+        "态度认真",
+        "有进步"
+      ],
+      "card_color": "green"
+    },
+    "王沫西": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "王梓谦": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "王梓熙": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "肖祺之": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "杨怀谷": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "叶梓豪": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "叶梓奕": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "尹维翰": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "袁铭浩": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "袁熹玥": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求持续练习，你会进步很快的。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，写完检查",
+      "mindset_issue": "需要更专注",
+      "mindset_desc": "你认真对待每一件事，把这个态度用在写字上，你会进步很快的。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真对待每一件事，把这个态度用在写字上，你会进步很快的。",
+      "homework": [
+        "王字三排",
+        "木字三排",
+        "十字三排"
+      ],
+      "progress": [
+        "能够跟上课堂节奏"
+      ],
+      "risk": "保持专注，稳扎稳打就是最好的策略。",
+      "tags": [
+        "规范建立",
+        "态度认真",
+        "稳扎稳打"
+      ],
+      "card_color": "blue"
+    },
+    "张皓杰": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "张清艺": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "张妍": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "张载义": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "章馨予": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "赵谦诺": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "郑苒": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "郑毅": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "周恩雅": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "周彦京": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "朱一一": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    },
+    "钟雨纯": {
+      "type": "normal",
+      "stage": "规范建立期",
+      "stage_from": "初学阶段",
+      "stage_to": "系统掌握",
+      "stage_desc": "持续练习，建立规范意识，是这个阶段最重要的事。",
+      "core_issue": "需要更多专注练习",
+      "core_issue_detail": "按要求认真练习，你会进步很快。",
+      "technique_issue": "基本功还需加强",
+      "technique_fix": "认真按笔顺写，注意笔画质量",
+      "mindset_issue": "保持专注",
+      "mindset_desc": "你认真跟随课程，这就是进步的基础。",
+      "strength": "态度认真",
+      "teacher_praise": null,
+      "teacher_criticism": null,
+      "next_actions": [
+        "认真按笔顺写",
+        "每写完一个检查一下"
+      ],
+      "parent_tip": "每天固定时间练习10分钟，建立习惯。",
+      "wake_word": "你认真练习的每一步，都在积累未来的进步。",
+      "homework": [
+        "按老师要求完成作业",
+        "注意笔顺和结构"
+      ],
+      "progress": [
+        "正常参与课堂学习"
+      ],
+      "risk": "保持当前的学习状态就已经很好了。",
+      "tags": [
+        "规范建立",
+        "态度认真"
+      ],
+      "card_color": "blue"
+    }
+  },
+  "yaml": {
+    "meta": {
+      "lesson_date": "2026-03-25",
+      "lesson_title": "笔法与字形规范",
+      "lesson_type": "行书基础 · 笔法专项",
+      "target_group": "书法学员",
+      "core_theme": "行书笔端一连与结构规范"
+    },
+    "quotes": [
+      "先死了才能活，不懂也先模仿，模仿久了就懂了。",
+      "不要让错误不断重复，带着要求去练习，不要趴在上面写。",
+      "你均衡已经做得特别好，往艺术方向走，变化更丰富、更大胆、更夸张一些。",
+      "既然有可以交的了，其他的你先放心大胆地写。"
+    ],
+    "techniques": [
+      "笔端一连",
+      "多横等距",
+      "王/五区分",
+      "长横平正",
+      "反捺使用",
+      "撇捺节奏"
+    ],
+    "mindset_stages": [
+      "混沌期",
+      "先死后活",
+      "刻意练习",
+      "艺术表达"
+    ]
+  },
+  "student_trends": {
+    "刘启骁": {
+      "name": "刘启骁",
+      "lessons": [
+        "第1课 03-11",
+        "第2课 03-18",
+        "第3课 03-25"
+      ],
+      "technique_scores": [
+        35,
+        48,
+        58
+      ],
+      "mindset_scores": [
+        20,
+        35,
+        42
+      ],
+      "overall_scores": [
+        28,
+        42,
+        50
+      ],
+      "highlights": [
+        "笔顺不规范被点名，没看笔顺就写",
+        "横画倾斜问题开始改善，三排节奏建立",
+        "模仿能力被肯定，体现完整感好"
+      ]
+    },
+    "郝思成": {
+      "name": "郝思成",
+      "lessons": [
+        "第1课 03-11",
+        "第2课 03-18",
+        "第3课 03-25"
+      ],
+      "technique_scores": [
+        55,
+        68,
+        78
+      ],
+      "mindset_scores": [
+        40,
+        55,
+        70
+      ],
+      "overall_scores": [
+        48,
+        62,
+        75
+      ],
+      "highlights": [
+        "均衡感强，结构端正",
+        "开始尝试轻重变化",
+        "被表扬《均衡已做得特别好》"
+      ]
+    }
+  }
+};
+  var pieInstance = null;
+  var radarInstance = null;
+
+  async function loadDashboard() {
+    renderAll(EMBEDDED_DATA);
+  }
+
+  function renderAll(data) {
+    var meta = data.meta, stats = data.stats, students = data.students;
+    var allNames = Object.keys(students);
+    document.getElementById('hd-lesson').textContent = meta.lesson_title;
+    document.getElementById('hd-meta').textContent = meta.lesson_date + ' · ' + allNames.length + '名学员';
+    document.getElementById('stage-tag').textContent = allNames.length + '份档案';
+    document.getElementById('student-count-tag').textContent = allNames.length + '名学员';
+    renderStats(stats);
+    renderPie(stats);
+    renderMindset();
+    renderActions(stats, students);
+    renderStudentTabs(allNames, students);
+    renderStudents(allNames, students, 'all');
+    initCharts();
+    initAnimations();
+    renderTrendChart(EMBEDDED_DATA.student_trends);
+  }
+
+  function renderStats(stats) {
+    var total = stats.total || 0;
+    var risk = stats.risk_count || 0;
+    var highlight = stats.highlight_count || 0;
+    var normal = stats.type_counts && stats.type_counts.normal ? stats.type_counts.normal : 0;
+    var pct = total > 0 ? Math.round(risk / total * 100) : 0;
+    var pct2 = total > 0 ? Math.round(normal / total * 100) : 0;
+    document.getElementById('stats-row').innerHTML =
+      '<div class="stat-card red">' +
+      '<div class="stat-label">重点关注学员</div>' +
+      '<div class="stat-value">' + risk + '<span style="font-size:18px;font-weight:400;color:var(--text-dim)">人</span></div>' +
+      '<div class="stat-meta">占总人数 ' + pct + '% <span class="stat-badge down">需跟进</span></div></div>' +
+      '<div class="stat-card gold">' +
+      '<div class="stat-label">高潜艺术期</div>' +
+      '<div class="stat-value">' + highlight + '<span style="font-size:18px;font-weight:400;color:var(--text-dim)">人</span></div>' +
+      '<div class="stat-meta">均衡基础扎实 <span class="stat-badge up">值得培养</span></div></div>' +
+      '<div class="stat-card green">' +
+      '<div class="stat-label">进步中学员</div>' +
+      '<div class="stat-value">' + normal + '<span style="font-size:18px;font-weight:400;color:var(--text-dim)">人</span></div>' +
+      '<div class="stat-meta">占总人数 ' + pct2 + '% <span class="stat-badge up">稳中向好</span></div></div>' +
+      '<div class="stat-card blue">' +
+      '<div class="stat-label">班级总人数</div>' +
+      '<div class="stat-value">' + total + '<span style="font-size:18px;font-weight:400;color:var(--text-dim)">人</span></div>' +
+      '<div class="stat-meta">档案完整率 100%</div></div>';
+  }
+
+  function renderPie(stats) {
+    var stageColors = {
+      '规范建立期': '#4a7a9c',
+      '规范完善期': '#4a8c6a',
+      '艺术突破期': '#d4a843',
+      '风险观察期': '#c8442a'
+    };
+    var counts = stats.stage_counts || {};
+    var labels = Object.keys(counts);
+    var values = Object.keys(counts).map(function(k) { return counts[k]; });
+
+    var legendHTML = '';
+    for (var i = 0; i < labels.length; i++) {
+      var c = stageColors[labels[i]] || '#888';
+      legendHTML += '<div class="pie-item"><span class="pie-dot" style="background:' + c + '"></span><span class="pie-item-label">' + labels[i] + '</span><span class="pie-item-value">' + values[i] + '人</span></div>';
+    }
+    document.getElementById('pie-legend').innerHTML = legendHTML;
+
+    if (pieInstance) pieInstance.destroy();
+    var ctx = document.getElementById('stagePie').getContext('2d');
+    pieInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: labels.map(function(l) { return stageColors[l] || '#888'; }),
+          borderColor: '#201d12',
+          borderWidth: 3,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        cutout: '62%',
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.raw + '人'; } } }
+        }
+      }
+    });
+  }
+
+  function renderMindset() {
+    var stages = [
+      { label: '混沌期', pct: 15, color: 'rgba(90,80,64,0.85)', count: 11 },
+      { label: '先死后活', pct: 38, color: 'rgba(74,122,156,0.9)', count: 27 },
+      { label: '刻意练习', pct: 30, color: 'rgba(212,168,67,0.9)', count: 22 },
+      { label: '艺术表达', pct: 17, color: 'rgba(200,68,42,0.9)', count: 12 }
+    ];
+    var html = '';
+    for (var i = 0; i < stages.length; i++) {
+      var s = stages[i];
+      html += '<div class="mindset-stage"><div class="mindset-label">' + s.label + '</div><div class="mindset-bar-bg"><div class="mindset-bar-fill" style="width:' + s.pct + '%;background:' + s.color + '">' + s.pct + '%</div></div><div class="mindset-count">' + s.count + '人</div></div>';
+    }
+    document.getElementById('mindset-track').innerHTML = html;
+  }
+
+  function renderActions(stats, students) {
+    var riskNames = stats.risk_students || [];
+    var highlightNames = stats.highlight_students || [];
+    var actions = [
+      { n: '1', title: '笔端一连专项练习', desc: '每人画连接线，再落笔写，三排过关。重点：末尾必须指向下一笔开头。' },
+      { n: '2', title: '长横平正强化', desc: '横画微翘后必须「回来」，用眼睛定位检验，不凭手感。' },
+      { n: '3', title: '反捺提速推广', desc: '本课仅28%使用反捺，下节课重点推广，适用于人字头、宝盖头等场景。' },
+      { n: '4', title: '高潜学员激励', desc: '重点关注：' + highlightNames.join('、') + '——鼓励大胆尝试变化，从「均衡」走向「艺术」。' },
+      { n: '5', title: '风险学员跟进', desc: '重点关注：' + riskNames.join('、') + '——建议家长沟通，每日检查笔顺确认。' }
+    ];
+    var html = '';
+    for (var i = 0; i < actions.length; i++) {
+      var a = actions[i];
+      html += '<div class="action-item"><div class="action-num">' + a.n + '</div><div class="action-text"><span class="action-highlight">' + a.title + '</span><br>' + a.desc + '</div></div>';
+    }
+    document.getElementById('action-list').innerHTML = html;
+  }
+
+  function renderStudentTabs(names, students) {
+    var risk = [], highlight = [], stable = [], normal = [];
+    for (var i = 0; i < names.length; i++) {
+      var n = names[i], s = students[n] || {};
+      if (s.type === 'needs_improvement') risk.push(n);
+      else if (s.type === 'highlight') highlight.push(n);
+      else if (s.type === 'normal' && s.progress && s.progress.length > 0) stable.push(n);
+      else normal.push(n);
+    }
+    var tabs = [
+      { key: 'all', label: '全部', arr: names },
+      { key: 'risk', label: '需关注', arr: risk },
+      { key: 'highlight', label: '高潜', arr: highlight },
+      { key: 'stable', label: '进步中', arr: stable },
+      { key: 'normal', label: '积累中', arr: normal }
+    ];
+    var html = '';
+    for (var i = 0; i < tabs.length; i++) {
+      var t = tabs[i];
+      html += '<button class="student-tab' + (t.key === 'all' ? ' active' : '') + '" data-filter="' + t.key + '" onclick="switchTab(\'' + t.key + '\',this)">' + t.label + ' <span class="tab-count">' + t.arr.length + '</span></button>';
+    }
+    document.getElementById('student-tabs').innerHTML = html;
+  }
+
+  
+
+window.switchTab = function(filter, btn) {
+    var btns = document.querySelectorAll('.student-tab');
+    for (var i=0;i<btns.length;i++) btns[i].classList.remove('active');
+    btn.classList.add('active');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', './output/all_students.json?t=' + Date.now(), true);
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        var data = JSON.parse(xhr.responseText);
+        var names = Object.keys(data.students);
+        var filtered = names;
+        if (filter === 'risk') filtered = names.filter(function(n){ return data.students[n] && data.students[n].type === 'needs_improvement'; });
+        else if (filter === 'highlight') filtered = names.filter(function(n){ return data.students[n] && data.students[n].type === 'highlight'; });
+        else if (filter === 'stable') filtered = names.filter(function(n){ return data.students[n] && data.students[n].type === 'normal' && data.students[n].progress && data.students[n].progress.length > 0; });
+        else if (filter === 'normal') filtered = names.filter(function(n){ return data.students[n] && data.students[n].type === 'normal' && (!data.students[n].progress || data.students[n].progress.length === 0); });
+        renderStudentGrid(filtered, data.students);
+      }
+    };
+    xhr.send();
+  };
+
+  function renderStudentGrid(names, students) {
+    var grid = document.getElementById('student-grid');
+    if (!names || names.length === 0) {
+      grid.innerHTML = '<div class="empty-state">该分类暂无学员</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var s = students[name] || {};
+      var type = s.type || 'normal';
+      var colorClass = type === 'needs_improvement' ? 'red' : type === 'highlight' ? 'gold' : 'blue';
+      var badgeClass = type === 'needs_improvement' ? 'badge-risk' : type === 'highlight' ? 'badge-highlight' : 'badge-normal';
+      var badgeText = type === 'needs_improvement' ? '需关注' : type === 'highlight' ? '高潜' : '积累中';
+      var stage = s.stage || '学习进行中';
+      var issue = s.core_issue || '继续认真练习，保持进步。';
+      var tags = s.tags || [];
+      var tagsHtml = '';
+      for (var j = 0; j < tags.length; j++) { tagsHtml += '<span class="tag">' + tags[j] + '</span>'; }
+      var strengthHtml = s.strength ? '<div class="student-strength">' + s.strength + '</div>' : '';
+      var progressHtml = '';
+      if (s.progress && s.progress.length > 0) {
+        for (var k = 0; k < s.progress.length; k++) { progressHtml += '<div class="student-progress">- ' + s.progress[k] + '</div>'; }
+      }
+      var nextActions = (s.next_actions || ['按要求认真练习']).join('；');
+      var homeworkItems = s.homework || ['按老师要求完成练习'];
+      var homeworkHtml = '';
+      for (var m = 0; m < homeworkItems.length; m++) { homeworkHtml += '<li>' + homeworkItems[m] + '</li>'; }
+      var parentTip = s.parent_tip || '关注孩子的练习态度';
+      var wakeWord = s.wake_word || '继续努力！';
+      html += '<div class="student-card ' + colorClass + '" onclick="this.classList.toggle(\'expanded\')">' +
+        '<div class="student-top">' +
+        '<div class="student-name">' + name + '</div>' +
+        '<span class="student-badge ' + badgeClass + '">' + badgeText + '</span></div>' +
+        '<div class="student-issue">' + issue + '</div>' +
+        '<div class="student-stage-line">阶段：' + stage + '</div>' +
+        strengthHtml + progressHtml +
+        '<div class="student-tags">' + tagsHtml + '</div>' +
+        '<div class="student-detail">' +
+        '<div class="detail-section"><div class="detail-label">下一步训练</div><div class="detail-text">' + nextActions + '</div></div>' +
+        '<div class="detail-section"><div class="detail-label">本课作业</div><div class="detail-homework"><ul>' + homeworkHtml + '</ul></div></div>' +
+        '<div class="detail-section"><div class="detail-label">家长提示</div><div class="detail-text">' + parentTip + '</div></div>' +
+        '<div class="detail-section"><div class="detail-label">点醒金句</div><div class="detail-text" style="color:var(--gold);font-size:11px">「' + wakeWord + '」</div></div>' +
+        '</div></div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function initCharts() {
+    Chart.defaults.color = '#8a7d65';
+    Chart.defaults.font.family = "'Inter', 'Noto Sans SC', sans-serif";
+    var rCtx = document.getElementById('riskRadar').getContext('2d');
+    new Chart(rCtx, {
+      type: 'radar',
+      data: {
+        labels: ['专注度', '笔顺规范', '书写态度', '技法掌握', '进步速度', '心法觉醒'],
+        datasets: [
+          { label: '班级当前', data: [62, 55, 68, 58, 70, 52], backgroundColor: 'rgba(200,68,42,0.12)', borderColor: '#c8442a', borderWidth: 2, pointBackgroundColor: '#c8442a', pointRadius: 4 },
+          { label: '理想水平', data: [80, 80, 80, 80, 80, 80], backgroundColor: 'rgba(74,140,106,0.06)', borderColor: '#4a8c6a', borderWidth: 1.5, borderDash: [5, 5], pointRadius: 0 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          r: { min: 0, max: 100, ticks: { stepSize: 20, display: false }, grid: { color: 'rgba(255,255,255,0.06)' }, angleLines: { color: 'rgba(255,255,255,0.06)' }, pointLabels: { color: '#8a7d65', font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // 双人进步趋势折线图
+  function renderTrendChart(trends) {
+    if (!trends) return;
+    var liu = trends['刘启骁'];
+    var hao = trends['郝思成'];
+    var lessons = liu ? liu.lessons : ['第1课 03-11', '第2课 03-18', '第3课 03-25'];
+
+    var commonOpts = {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { color: '#8a7d65', boxWidth: 10, padding: 12, font: { size: 11 } } },
+        tooltip: { backgroundColor: '#201d12', borderColor: '#3a3520', borderWidth: 1, titleColor: '#f0e8d5', bodyColor: '#8a7d65', padding: 10 }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7d65', font: { size: 11 } } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7d65', font: { size: 11 }, callback: function(v){ return v + '%'; } } }
+      }
+    };
+
+    // 刘启骁单人图
+    var ctxLiu = document.getElementById('trendChart_liu');
+    if (ctxLiu && liu) {
+      new Chart(ctxLiu.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: liu.lessons,
+          datasets: [
+            { label: '技法掌握度', data: liu.technique_scores, borderColor: '#c8442a', backgroundColor: 'rgba(200,68,42,0.08)', borderWidth: 2.5, pointBackgroundColor: '#c8442a', pointRadius: 5, tension: 0.35, fill: true },
+            { label: '心法觉醒度', data: liu.mindset_scores, borderColor: '#d4a843', backgroundColor: 'rgba(212,168,67,0.05)', borderWidth: 2, pointBackgroundColor: '#d4a843', pointRadius: 4, tension: 0.35, fill: true },
+            { label: '综合掌握度', data: liu.overall_scores, borderColor: '#4a8c6a', backgroundColor: 'rgba(74,140,106,0.05)', borderWidth: 2, pointBackgroundColor: '#4a8c6a', pointRadius: 4, tension: 0.35, fill: true }
+          ]
+        },
+        options: JSON.parse(JSON.stringify(commonOpts))
+      });
+    }
+
+    // 郝思成单人图
+    var ctxHao = document.getElementById('trendChart_hao');
+    if (ctxHao && hao) {
+      new Chart(ctxHao.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: hao.lessons,
+          datasets: [
+            { label: '技法掌握度', data: hao.technique_scores, borderColor: '#d4a843', backgroundColor: 'rgba(212,168,67,0.08)', borderWidth: 2.5, pointBackgroundColor: '#d4a843', pointRadius: 5, tension: 0.35, fill: true },
+            { label: '心法觉醒度', data: hao.mindset_scores, borderColor: '#7a5c9c', backgroundColor: 'rgba(122,92,156,0.05)', borderWidth: 2, pointBackgroundColor: '#7a5c9c', pointRadius: 4, tension: 0.35, fill: true },
+            { label: '综合掌握度', data: hao.overall_scores, borderColor: '#4a8c6a', backgroundColor: 'rgba(74,140,106,0.05)', borderWidth: 2, pointBackgroundColor: '#4a8c6a', pointRadius: 4, tension: 0.35, fill: true }
+          ]
+        },
+        options: JSON.parse(JSON.stringify(commonOpts))
+      });
+    }
+
+    // 双人综合对比图
+    var ctxCmp = document.getElementById('trendChart_compare');
+    if (ctxCmp && liu && hao) {
+      new Chart(ctxCmp.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: lessons,
+          datasets: [
+            {
+              label: '刘启骁 综合掌握度',
+              data: liu.overall_scores,
+              borderColor: '#c8442a',
+              backgroundColor: 'rgba(200,68,42,0.06)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#c8442a',
+              pointRadius: 6,
+              pointHoverRadius: 9,
+              tension: 0.35,
+              fill: true,
+            },
+            {
+              label: '郝思成 综合掌握度',
+              data: hao.overall_scores,
+              borderColor: '#d4a843',
+              backgroundColor: 'rgba(212,168,67,0.06)',
+              borderWidth: 2.5,
+              pointBackgroundColor: '#d4a843',
+              pointRadius: 6,
+              pointHoverRadius: 9,
+              tension: 0.35,
+              fill: true,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { color: '#8a7d65', boxWidth: 10, padding: 14, font: { size: 11 } } },
+            tooltip: {
+              backgroundColor: '#201d12', borderColor: '#3a3520', borderWidth: 1,
+              titleColor: '#f0e8d5', bodyColor: '#8a7d65', padding: 12,
+              callbacks: {
+                afterBody: function(items) {
+                  var diff = null;
+                  if (items.length >= 2) {
+                    diff = items[1].raw - items[0].raw;
+                    return '差距: ' + (diff > 0 ? '+' : '') + diff + '%';
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a7d65', font: { size: 11 } } },
+            y: {
+              min: 0, max: 100,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#8a7d65', font: { size: 11 }, callback: function(v){ return v + '%'; } }
+            }
+          }
+        }
+      });
+    }
+  }
+  // 刘启骁进步趋势折线图
+  function renderTrendChart(trends) {
+    var container = document.getElementById('trend-section');
+    if (!container) return;
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    var s = trends && trends['\u5218\u542f\u9a81'];
+    if (!s) return;
+
+    // 填充高亮说明
+    var highlightList = document.getElementById('trend-highlights');
+    if (highlightList) {
+      highlightList.innerHTML = '';
+      for (var i = 0; i < s.highlights.length; i++) {
+        var li = document.createElement('li');
+        li.innerHTML = '<span style="color:var(--gold)">' + s.lessons[i] + '</span> ' + s.highlights[i];
+        highlightList.appendChild(li);
+      }
+    }
+
+    new Chart(ctx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: s.lessons,
+        datasets: [
+          {
+            label: '技法掌握度',
+            data: s.technique_scores,
+            borderColor: '#c8442a',
+            backgroundColor: 'rgba(200,68,42,0.07)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#c8442a',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.35,
+            fill: true,
+          },
+          {
+            label: '心法觉醒度',
+            data: s.mindset_scores,
+            borderColor: '#d4a843',
+            backgroundColor: 'rgba(212,168,67,0.05)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#d4a843',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.35,
+            fill: true,
+          },
+          {
+            label: '综合掌握度',
+            data: s.overall_scores,
+            borderColor: '#4a8c6a',
+            backgroundColor: 'rgba(74,140,106,0.05)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#4a8c6a',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.35,
+            fill: true,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { color: '#8a7d65', boxWidth: 12, padding: 14, font: { size: 11 } }
+          },
+          tooltip: {
+            backgroundColor: '#201d12',
+            borderColor: '#3a3520',
+            borderWidth: 1,
+            titleColor: '#f0e8d5',
+            bodyColor: '#8a7d65',
+            padding: 12,
+            callbacks: {
+              afterBody: function() {
+                return;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8a7d65', font: { size: 11 } }
+          },
+          y: {
+            min: 0, max: 100,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8a7d65', font: { size: 11 }, callback: function(v){ return v + '%'; } }
+          }
+        }
+      }
+    });
+  }
+
+  function initAnimations() {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.05 });
+    var fades = document.querySelectorAll('.fade-in');
+    for (var i = 0; i < fades.length; i++) observer.observe(fades[i]);
+    setTimeout(function() {
+      var bars = document.querySelectorAll('.heat-bar-fill, .mindset-bar-fill');
+      for (var j = 0; j < bars.length; j++) {
+        var w = bars[j].style.width;
+        bars[j].style.width = '0';
+        var bar = bars[j];
+        requestAnimationFrame(function() { bar.style.width = w; });
+      }
+    }, 400);
+  }
+
+  loadDashboard();
+})();
+  </script>
+</body>
+</html>

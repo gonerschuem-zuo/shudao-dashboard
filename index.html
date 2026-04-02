@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书道心力模型 · 教学数据看板</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Google Fonts removed for offline use -->
   <script>
 /* Chart.js 4.4.0 - Inline minified version */
 !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?module.exports=e():"function"==typeof define&&define.amd?define(e):(t="undefined"!=typeof globalThis?globalThis:t||self).Chart=e()}(this,(function(){"use strict";var t=Object.freeze({__proto__:null,get Colors(){return en},get Decimation(){return ti},get Filler(){return ai},get Legend(){return ri},get SubTitle(){return oi},get Title(){return si},get Tooltip(){return li}});return t}));
@@ -24,7 +24,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
       min-height: 100vh; overflow-x: hidden;
     }
     body::before {
@@ -39,13 +39,13 @@
       border-bottom: 1px solid var(--border); padding: 0 40px; height: 72px;
       display: flex; align-items: center; justify-content: space-between;
     }
-    .header-title { font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700; color: var(--cream); letter-spacing: 0.08em; }
+    .header-title { font-family: 'SimSun', '宋体', serif; font-size: 20px; font-weight: 700; color: var(--cream); letter-spacing: 0.08em; }
     .header-sub { font-size: 12px; color: var(--text-dim); margin-left: 6px; }
     .header-right { display: flex; align-items: center; gap: 20px; }
     .badge-live { display: flex; align-items: center; gap: 6px; background: rgba(200,68,42,0.12); border: 1px solid rgba(200,68,42,0.3); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--red); }
     .badge-live .dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: pulse 2s ease infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-    .header-lesson { font-size: 12px; color: var(--text-dim); font-family: 'Noto Serif SC', serif; }
+    .header-lesson { font-size: 12px; color: var(--text-dim); font-family: 'SimSun', '宋体', serif; }
     .header-meta { font-size: 12px; color: var(--text-muted); }
     .container { max-width: 1440px; margin: 0 auto; padding: 28px 40px 60px; position: relative; z-index: 1; }
     .fade-in { opacity: 0; transform: translateY(18px); transition: opacity 0.55s ease, transform 0.55s ease; }
@@ -59,7 +59,7 @@
     .stat-card.green::before { background: var(--green); }
     .stat-card.blue::before { background: var(--blue); }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
-    .stat-value { font-family: 'Noto Serif SC', serif; font-size: 40px; font-weight: 900; color: var(--cream); line-height: 1; margin-bottom: 8px; }
+    .stat-value { font-family: 'SimSun', '宋体', serif; font-size: 40px; font-weight: 900; color: var(--cream); line-height: 1; margin-bottom: 8px; }
     .stat-meta { font-size: 12px; color: var(--text-dim); }
     .stat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
     .stat-badge.up { background: rgba(74,140,106,0.15); color: var(--green); }
@@ -70,7 +70,7 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px 28px; transition: border-color 0.3s; }
     .card:hover { border-color: rgba(212,168,67,0.2); }
     .card-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
-    .card-title { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; color: var(--cream); letter-spacing: 0.05em; }
+    .card-title { font-family: 'SimSun', '宋体', serif; font-size: 15px; font-weight: 700; color: var(--cream); letter-spacing: 0.05em; }
     .card-tag { font-size: 10px; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; letter-spacing: 0.05em; }
     .pie-wrap { display: flex; align-items: center; gap: 20px; }
     .pie-wrap canvas { max-width: 170px; }
@@ -106,7 +106,7 @@
     .student-card.green { border-left: 3px solid var(--green); }
     .student-card.blue { border-left: 3px solid var(--blue); }
     .student-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
-    .student-name { font-family: 'Noto Serif SC', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
+    .student-name { font-family: 'SimSun', '宋体', serif; font-size: 15px; font-weight: 700; color: var(--cream); }
     .student-badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
     .badge-risk { background: rgba(200,68,42,0.15); color: var(--red); border: 1px solid rgba(200,68,42,0.3); }
     .badge-highlight { background: rgba(212,168,67,0.15); color: var(--gold); border: 1px solid rgba(212,168,67,0.3); }
@@ -127,7 +127,7 @@
     .detail-homework li { margin-bottom: 2px; }
     .quotes-list { display: flex; flex-direction: column; gap: 10px; }
     .quote-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; }
-    .quote-item::before { content: '"'; position: absolute; top: -2px; left: 10px; font-family: 'Noto Serif SC', serif; font-size: 32px; color: var(--red); opacity: 0.35; line-height: 1; }
+    .quote-item::before { content: '"'; position: absolute; top: -2px; left: 10px; font-family: 'SimSun', '宋体', serif; font-size: 32px; color: var(--red); opacity: 0.35; line-height: 1; }
     .quote-text { font-size: 12px; color: var(--text); line-height: 1.6; padding-left: 8px; }
     .quote-source { font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: right; }
     .action-list { display: flex; flex-direction: column; gap: 8px; }
@@ -159,7 +159,7 @@
 }
 
 .section-title {
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'SimSun', '宋体', serif;
   font-size: 22px;
   font-weight: 700;
   color: var(--cream);
